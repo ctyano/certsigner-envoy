@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: certsigner-envoy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: certsigner-envoy
+  template:
+    metadata:
+      labels:
+        app: certsigner-envoy
+    spec:
+      containers:
+        - name: envoy
+          image: ghcr.io/ctyano/certsigner-envoy:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - envoy
+            - -c
+            - /etc/envoy/envoy.yaml
+            - -l
+            - debug
+          ports:
+            - containerPort: 10000
+          volumeMounts:
+            - name: config
+              mountPath: /etc/envoy/envoy.yaml
+              subPath: envoy.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: envoy-config
