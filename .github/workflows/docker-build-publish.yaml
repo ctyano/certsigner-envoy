@@ -86,11 +86,13 @@ jobs:
           else
             PACKAGE_VERSION="$( \
               curl -s https://api.github.com/repos/${{ env.TRACKING_GIT_REPO }}/commits \
-                | jq -r .[0].sha
+                | jq -r .[0].sha \
+                | cut -c -7
               )"
             TAG_VERSION="$( \
               curl -s https://api.github.com/repos/${{ env.TRACKING_GIT_REPO }}/commits \
-                | jq -r .[0].sha
+                | jq -r .[0].sha \
+                | cut -c -7
               )"
           fi
 
