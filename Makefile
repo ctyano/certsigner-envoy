@@ -2,17 +2,7 @@ ifeq ($(APP_NAME),)
 APP_NAME := $(shell basename $(shell pwd))
 endif
 
-#ifeq ($(wildcard $(SUBMODULE_NAME)),)
-#SUBMODULE_REPO := ctyano/ctyano
-#SUBMODULE_RESULT := $(shell git submodule add --force https://github.com/$(SUBMODULE_REPO).git $(SUBMODULE_NAME))
-#endif
-
 ifeq ($(DOCKER_TAG),)
-#ifeq ($(VERSION),)
-#VERSION := $(shell git submodule status | sed 's/^.* $(SUBMODULE_NAME) .*v\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/g')
-#ifeq ($(VERSION),)
-#VERSION := $(shell curl -s https://api.github.com/repos/$(USER)/$(APP_NAME)/releases | jq -r .[].tag_name | grep -E '.*(v[0-9]*.[0-9]*.[0-9]*).*' | sed -e 's/.*v\([0-9]*.[0-9]*.[0-9]*\).*/\1/g' | sort -ruV | head -n1)
-#endif
 DOCKER_TAG := :latest
 else
 ifneq ($(VERSION),)

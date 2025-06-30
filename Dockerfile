@@ -20,6 +20,9 @@ RUN GOOS=wasip1 \
 
 RUN rm -rf "${GOPATH}"
 
+# [Required] A host environment supporting this toolchain, such as Envoy >= 1.33.0. This SDK leverages additional host imports added to the proxy-wasm-cpp-host in PR#427.
+# https://github.com/proxy-wasm/proxy-wasm-go-sdk/blob/ab4161dcf9246a828008b539a82a1556cf0f2e24/README.md#requirements
+# https://github.com/proxy-wasm/proxy-wasm-cpp-host/pull/427
 FROM docker.io/envoyproxy/envoy:v1.34-latest
 
 RUN apt-get update && \
@@ -28,5 +31,4 @@ RUN apt-get update && \
 ARG APP_NAME=certsigner-envoy
 
 COPY --from=builder /opt/"${APP_NAME}.wasm" /etc/envoy/${APP_NAME}.wasm
-#COPY envoy.yaml /etc/envoy/envoy.yaml
 
