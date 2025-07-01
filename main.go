@@ -15,6 +15,10 @@ import (
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
 
+var (
+	DEFAULT_ATHENZ_USER_PREFIX = "user."
+)
+
 type CSRRequest struct {
 	CSR string `json:"csr"`
 }
@@ -181,7 +185,7 @@ func (ctx *httpContext) OnHttpRequestBody(bodySize int, endOfStream bool) types.
 		return types.ActionPause
 	}
 	cn := csr.Subject.CommonName
-	if name != cn {
+	if DEFAULT_ATHENZ_USER_PREFIX+name != cn {
 		proxywasm.LogWarnf("Claim %s does not match CSR CN: %s[%s], cn[%s]", ctx.nameClaim, ctx.nameClaim, name, cn)
 		proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("The name %s in %s claim does not match CSR CN %s", name, ctx.nameClaim, cn)), -1)
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))

@@ -23,12 +23,16 @@ endif
 
 BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 VCS_REF=$(shell cd $(SUBMODULE_NAME) && git rev-parse --short HEAD)
+ifeq ($(USER_PREFIX),)
+USER_PREFIX=user
+endif
+
 ifeq ($(XPLATFORMS),)
 XPLATFORMS := linux/amd64,linux/arm64
 endif
 XPLATFORM_ARGS := --platform=$(XPLATFORMS)
 
-BUILD_ARG := --build-arg 'BUILD_DATE=$(BUILD_DATE)' --build-arg 'VCS_REF=$(VCS_REF)' --build-arg 'VERSION=$(VERSION)'
+BUILD_ARG := --build-arg 'BUILD_DATE=$(BUILD_DATE)' --build-arg 'VCS_REF=$(VCS_REF)' --build-arg 'VERSION=$(VERSION)' --build-arg 'USER_PREFIX=$(USER_PREFIX)'
 
 ifeq ($(DOCKER_REGISTRY_OWNER),)
 DOCKER_REGISTRY_OWNER=ctyano

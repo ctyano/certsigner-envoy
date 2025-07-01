@@ -16,6 +16,7 @@ RUN go mod tidy
 RUN GOOS=wasip1 \
     GOARCH=wasm \
     go build -buildmode=c-shared -o "${APP_NAME}.wasm" \
+    -X "main.DEFAULT_ATHENZ_USER_PREFIX=${USER_PREFIX}" \
     && mv ${GOPATH}/src/${APP_NAME}/"${APP_NAME}.wasm" /opt/"${APP_NAME}.wasm"
 
 RUN rm -rf "${GOPATH}"
