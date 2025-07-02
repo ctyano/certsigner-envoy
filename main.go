@@ -93,13 +93,19 @@ func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlugi
 	}
 
 	p.nameClaim = strings.TrimSpace(gjson.Get(string(data), "claim").Str)
+	p.userPrefix = strings.TrimSpace(gjson.Get(string(data), "user_prefix").Str)
 
 	if p.nameClaim == "" {
-		proxywasm.LogCritical(`Invalid configuration format; expected {"claim": "<claim to extract the user name>"}`)
+		proxywasm.LogCritical(`Invalid configuration format; expected {"claim": "<prefix to prepend to the jwt claim to compare with csr subject cn as an athenz user name. e.g. user.>"}`)
+		return types.OnPluginStartStatusFailed
+	}
+	if p.userPrefix == "" {
+		proxywasm.LogCritical(`Invalid configuration format; expected {"user_prefix": "<jwt claim name to extract athenz user name>"}`)
 		return types.OnPluginStartStatusFailed
 	}
 
 	proxywasm.LogInfof("JWT claim name to extract the user name: %s", p.nameClaim)
+	proxywasm.LogInfof("Prefix string to prepend to user name: %s", p.userPrefix)
 
 	return types.OnPluginStartStatusOK
 }
