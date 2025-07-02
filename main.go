@@ -15,10 +15,6 @@ import (
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
 
-var (
-	DEFAULT_ATHENZ_USER_PREFIX = "user."
-)
-
 type CSRRequest struct {
 	CSR string `json:"csr"`
 }
@@ -46,16 +42,17 @@ type pluginContext struct {
 	// so that we don't need to reimplement all the methods.
 	types.DefaultPluginContext
 
-	// headerName and headerValue are the header to be added to response. They are configured via
-	// plugin configuration during OnPluginStart.
-	nameClaim string
+	// nameClaim and userPrefix are are configured via plugin configuration during OnPluginStart.
+	nameClaim  string
+	userPrefix string
 }
 
 // NewHttpContext implements types.PluginContext.
 func (p *pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	return &httpContext{
-		contextID: contextID,
-		nameClaim: p.nameClaim,
+		contextID:  contextID,
+		nameClaim:  p.nameClaim,
+		userPrefix: p.userPrefix,
 	}
 }
 
@@ -63,9 +60,9 @@ type httpContext struct {
 	types.DefaultHttpContext
 	contextID uint32
 
-	// nameClaim and headerValue are the header to be added to response. They are configured via
-	// plugin configuration during OnPluginStart.
-	nameClaim string
+	// nameClaim and userPrefix are are configured via plugin configuration during OnPluginStart.
+	nameClaim  string
+	userPrefix string
 }
 
 // OnPluginStart implements types.PluginContext.
@@ -75,7 +72,8 @@ type httpContext struct {
 //   "@type": type.googleapis.com/google.protobuf.StringValue
 //   value: |
 //     {
-//       "claim": "<claim to extract name>"
+//       "user_prefix": "<prefix to prepend to the jwt claim to compare with csr subject cn as an athenz user name. e.g. user.>",
+//       "claim": "<jwt claim name to extract athenz user name>"
 //     }
 func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPluginStartStatus {
 	proxywasm.LogDebug("Loading plugin config")
@@ -185,7 +183,7 @@ func (ctx *httpContext) OnHttpRequestBody(bodySize int, endOfStream bool) types.
 		return types.ActionPause
 	}
 	cn := csr.Subject.CommonName
-	if DEFAULT_ATHENZ_USER_PREFIX+name != cn {
+	if ctx.userPrefix+name != cn {
 		proxywasm.LogWarnf("Claim %s does not match CSR CN: %s[%s], cn[%s]", ctx.nameClaim, ctx.nameClaim, name, cn)
 		proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("The name %s in %s claim does not match CSR CN %s", name, ctx.nameClaim, cn)), -1)
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))

@@ -2,7 +2,27 @@
 FROM docker.io/library/golang:1 AS builder
 
 ARG APP_NAME=certsigner-envoy
+
 ARG VERSION=test
+# date -u +'%Y-%m-%dT%H:%M:%SZ'
+ARG BUILD_DATE
+# git rev-parse --short HEAD
+ARG VCS_REF
+
+ENV VERSION=$VERSION
+ENV BUILD_DATE=$BUILD_DATE
+ENV VCS_REF=$VCS_REF
+
+LABEL org.opencontainers.image.version=$VERSION
+LABEL org.opencontainers.image.revision=$VCS_REF
+LABEL org.opencontainers.image.created=$BUILD_DATE
+LABEL org.opencontainers.image.title="Athenz Certificate Signer Envoy"
+LABEL org.opencontainers.image.authors="ctyano <ctyano@duck.com>"
+LABEL org.opencontainers.image.vendor="ctyano <ctyano@duck.com>"
+LABEL org.opencontainers.image.licenses="GPL-3.0 license"
+LABEL org.opencontainers.image.url="ghcr.io/ctyano/certsigner-envoy"
+LABEL org.opencontainers.image.documentation="https://www.athenz.io/"
+LABEL org.opencontainers.image.source="https://github.com/ctyano/certsigner-envoy"
 
 ENV APP_NAME=${APP_NAME}
 
@@ -13,10 +33,10 @@ RUN apt-get update && apt-get install -y curl cmake g++ make unzip curl git tzda
 COPY . .
 
 RUN go mod tidy
-RUN GOOS=wasip1 \
+RUN set -x; \
+    GOOS=wasip1 \
     GOARCH=wasm \
     go build -buildmode=c-shared -o "${APP_NAME}.wasm" \
-    -X "main.DEFAULT_ATHENZ_USER_PREFIX=${USER_PREFIX}" \
     && mv ${GOPATH}/src/${APP_NAME}/"${APP_NAME}.wasm" /opt/"${APP_NAME}.wasm"
 
 RUN rm -rf "${GOPATH}"
