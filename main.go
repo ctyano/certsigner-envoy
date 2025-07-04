@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/tidwall/gjson"
@@ -65,6 +66,13 @@ type httpContext struct {
 	userPrefix string
 }
 
+// networkContext implements types.TcpContext.
+type networkContext struct {
+	// Embed the default tcp context here,
+	// so that we don't need to reimplement all the methods.
+	types.DefaultTcpContext
+}
+
 // OnPluginStart implements types.PluginContext.
 // Note that this parses the json data by gjson, since TinyGo doesn't support encoding/json.
 // You can also try https://github.com/mailru/easyjson, which supports decoding to a struct.
@@ -110,6 +118,38 @@ func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlugi
 	return types.OnPluginStartStatusOK
 }
 
+// NewTcpContext implements types.PluginContext.
+func (ctx *pluginContext) NewTcpContext(contextID uint32) types.TcpContext {
+	return &networkContext{}
+}
+
+// OnUpstreamData implements types.TcpContext.
+func (ctx *networkContext) OnDownstreamData(dataSize int, endOfStream bool) types.Action {
+	if dataSize == 0 {
+		return types.ActionContinue
+	}
+
+	address, err := proxywasm.GetProperty([]string{"source", "address"})
+	if err != nil {
+		proxywasm.LogWarnf("failed to get upstream remote address: %v", err)
+	}
+	proxywasm.LogInfof("remote address: %s", string(address))
+
+	// Extract just the IP (handle IPv6 addresses)
+	remoteAddr, err := proxywasm.GetProperty([]string{"downstream", "address"})
+	if err != nil {
+		proxywasm.LogCriticalf("Failed to get remote address: %v", err)
+		proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("Failed to get remote address: %v", err)), -1)
+		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
+		return types.ActionPause
+	}
+	// Save remote address for later in context
+	proxywasm.SetProperty([]string{"remote_address"}, remoteAddr)
+	proxywasm.LogDebugf("Saved the remote address in remote_address property: %s", remoteAddr)
+
+	return types.ActionContinue
+}
+
 // OnHttpRequestHeaders implements types.HttpContext.
 func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) types.Action {
 	hs, err := proxywasm.GetHttpRequestHeaders()
@@ -146,8 +186,9 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 		return types.ActionPause
 	}
 	// Save name for later in context
-	proxywasm.LogDebugf("Saved the user name in request_name property: %s", name)
 	proxywasm.SetProperty([]string{"request_name"}, []byte(name))
+	proxywasm.LogDebugf("Saved the user name in request_name property: %s", name)
+
 	return types.ActionContinue
 }
 
@@ -157,9 +198,14 @@ func (ctx *httpContext) OnHttpRequestBody(bodySize int, endOfStream bool) types.
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
 		return types.ActionPause
 	}
+
 	// Get name claim from context property
 	nameBytes, _ := proxywasm.GetProperty([]string{"request_name"})
+	remoteAddressBytes, _ := proxywasm.GetProperty([]string{"remote_address"})
 	name := string(nameBytes)
+	remoteAddr := string(remoteAddressBytes)
+
+	// Get name from CSR Subject CN
 	body, err := proxywasm.GetHttpRequestBody(0, bodySize)
 	if err != nil {
 		proxywasm.LogWarnf("Failed to read body")
@@ -189,12 +235,59 @@ func (ctx *httpContext) OnHttpRequestBody(bodySize int, endOfStream bool) types.
 		return types.ActionPause
 	}
 	cn := csr.Subject.CommonName
+
+	// Compare name with CSR Subject CN
 	if ctx.userPrefix+name != cn {
 		proxywasm.LogWarnf("Claim %s does not match CSR CN: %s[%s], cn[%s]", ctx.nameClaim, ctx.nameClaim, name, cn)
 		proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("The name %s in %s claim does not match CSR CN %s", name, ctx.nameClaim, cn)), -1)
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
 		return types.ActionPause
 	}
+
+	// CSR should not contain any SAN DNS entry
+	if len(csr.DNSNames) > 0 {
+		proxywasm.LogWarnf("CSR should not container any SAN DNS entries: %v", csr.DNSNames)
+		proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("CSR should not container any SAN DNS entries: %v", csr.DNSNames)), -1)
+		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
+		return types.ActionPause
+	}
+
+	// CSR should not contain any SAN Email entry
+	if len(csr.EmailAddresses) > 0 {
+		proxywasm.LogWarnf("CSR should not container any SAN Email entries: %v", csr.DNSNames)
+		proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("CSR should not container any SAN Email entries: %v", csr.DNSNames)), -1)
+		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
+		return types.ActionPause
+	}
+
+	// CSR should only contain valid SAN IP entry
+	if len(csr.IPAddresses) > 0 {
+		//host, _, err := net.SplitHostPort(remoteAddr)
+		//if err != nil {
+		//	proxywasm.LogCriticalf("Failed to split host/port: %v", err)
+		//	proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("Failed to split host/port: %v", err)), -1)
+		//	proxywasm.SetProperty([]string{"result"}, []byte("failure"))
+		//	return types.ActionPause
+		//}
+		// Parse the IP as net.IP
+		clientIP := net.ParseIP(remoteAddr)
+		if clientIP == nil {
+			proxywasm.LogCriticalf("Invalid IP: %s", remoteAddr)
+			proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("Invalid IP: %s", remoteAddr)), -1)
+			proxywasm.SetProperty([]string{"result"}, []byte("failure"))
+			return types.ActionPause
+		}
+
+		for _, ip := range csr.IPAddresses {
+			if !ip.Equal(clientIP) {
+				proxywasm.LogWarnf("CSR should only contain SAN IP entry as [%s]: %v", clientIP, csr.IPAddresses)
+				proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("CSR should only contain SAN IP entry as [%s]: %v", clientIP, csr.IPAddresses)), -1)
+				proxywasm.SetProperty([]string{"result"}, []byte("failure"))
+				return types.ActionPause
+			}
+		}
+	}
+
 	proxywasm.SetProperty([]string{"result"}, []byte("success"))
 	return types.ActionContinue
 }
