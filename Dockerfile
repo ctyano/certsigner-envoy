@@ -13,17 +13,6 @@ ENV VERSION=$VERSION
 ENV BUILD_DATE=$BUILD_DATE
 ENV VCS_REF=$VCS_REF
 
-LABEL org.opencontainers.image.version=$VERSION
-LABEL org.opencontainers.image.revision=$VCS_REF
-LABEL org.opencontainers.image.created=$BUILD_DATE
-LABEL org.opencontainers.image.title="Athenz Certificate Signer Envoy"
-LABEL org.opencontainers.image.authors="ctyano <ctyano@duck.com>"
-LABEL org.opencontainers.image.vendor="ctyano <ctyano@duck.com>"
-LABEL org.opencontainers.image.licenses="GPL-3.0 license"
-LABEL org.opencontainers.image.url="ghcr.io/ctyano/certsigner-envoy"
-LABEL org.opencontainers.image.documentation="https://www.athenz.io/"
-LABEL org.opencontainers.image.source="https://github.com/ctyano/certsigner-envoy"
-
 ENV APP_NAME=${APP_NAME}
 
 WORKDIR ${GOPATH}/src/${APP_NAME}
@@ -46,10 +35,29 @@ RUN rm -rf "${GOPATH}"
 # https://github.com/proxy-wasm/proxy-wasm-cpp-host/pull/427
 FROM docker.io/envoyproxy/envoy:v1.34-latest
 
+LABEL org.opencontainers.image.version=$VERSION
+LABEL org.opencontainers.image.revision=$VCS_REF
+LABEL org.opencontainers.image.created=$BUILD_DATE
+LABEL org.opencontainers.image.title="Athenz Certificate Signer Envoy"
+LABEL org.opencontainers.image.authors="ctyano <ctyano@duck.com>"
+LABEL org.opencontainers.image.vendor="ctyano <ctyano@duck.com>"
+LABEL org.opencontainers.image.licenses="GPL-3.0 license"
+LABEL org.opencontainers.image.url="ghcr.io/ctyano/certsigner-envoy"
+LABEL org.opencontainers.image.documentation="https://www.athenz.io/"
+LABEL org.opencontainers.image.source="https://github.com/ctyano/certsigner-envoy"
+
 RUN apt-get update && \
     apt-get install -y curl openssl wabt
 
 ARG APP_NAME=certsigner-envoy
+ARG VERSION=test
+ARG BUILD_DATE
+ARG VCS_REF
+
+ENV APP_NAME=${APP_NAME}
+ENV VERSION=${VERSION}
+ENV BUILD_DATE=${BUILD_DATE}
+ENV VCS_REF=${VCS_REF}
 
 COPY --from=builder /opt/"${APP_NAME}.wasm" /etc/envoy/${APP_NAME}.wasm
 
