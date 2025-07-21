@@ -15,8 +15,24 @@ import (
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
 
-type CSRRequest struct {
+type CrypkiCSRRequest struct {
 	CSR string `json:"csr"`
+}
+
+type CFSSLCSRRequest struct {
+	CSR string `json:"certificate_request"`
+}
+
+type CSRProvider interface {
+	GetCSR() string
+}
+
+func (r CrypkiCSRRequest) GetCSR() string {
+	return r.CSR
+}
+
+func (r CFSSLCSRRequest) GetCSR() string {
+	return r.CSR
 }
 
 func main() {}
@@ -45,6 +61,7 @@ type pluginContext struct {
 	// nameClaim and userPrefix are are configured via plugin configuration during OnPluginStart.
 	nameClaim  string
 	userPrefix string
+	signerType string
 }
 
 // NewHttpContext implements types.PluginContext.
@@ -53,6 +70,7 @@ func (p *pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 		contextID:  contextID,
 		nameClaim:  p.nameClaim,
 		userPrefix: p.userPrefix,
+		signerType: p.signerType,
 	}
 }
 
@@ -63,6 +81,7 @@ type httpContext struct {
 	// nameClaim and userPrefix are are configured via plugin configuration during OnPluginStart.
 	nameClaim  string
 	userPrefix string
+	signerType string
 }
 
 // OnPluginStart implements types.PluginContext.
@@ -94,6 +113,7 @@ func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlugi
 
 	p.nameClaim = strings.TrimSpace(gjson.Get(string(data), "claim").Str)
 	p.userPrefix = strings.TrimSpace(gjson.Get(string(data), "user_prefix").Str)
+	p.signerType = strings.TrimSpace(gjson.Get(string(data), "signer").Str)
 
 	if p.nameClaim == "" {
 		proxywasm.LogCritical(`Invalid configuration format; expected {"claim": "<prefix to prepend to the jwt claim to compare with csr subject cn as an athenz user name. e.g. user.>"}`)
@@ -103,9 +123,14 @@ func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlugi
 		proxywasm.LogCritical(`Invalid configuration format; expected {"user_prefix": "<jwt claim name to extract athenz user name>"}`)
 		return types.OnPluginStartStatusFailed
 	}
+	if p.signerType != "crypki" || p.signerType != "cfssl" {
+		proxywasm.LogCritical(`Invalid configuration format; expected {"signer": "<\"crypki\" or \"cfssl\">"}`)
+		return types.OnPluginStartStatusFailed
+	}
 
 	proxywasm.LogInfof("JWT claim name to extract the user name: %s", p.nameClaim)
 	proxywasm.LogInfof("Prefix string to prepend to user name: %s", p.userPrefix)
+	proxywasm.LogInfof("Signer type: %s", p.signerType)
 
 	return types.OnPluginStartStatusOK
 }
@@ -167,23 +192,40 @@ func (ctx *httpContext) OnHttpRequestBody(bodySize int, endOfStream bool) types.
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
 		return types.ActionPause
 	}
-	var req CSRRequest
-	if err := json.Unmarshal(body, &req); err != nil || req.CSR == "" {
-		proxywasm.LogWarnf("Invalid JSON or missing csr")
-		proxywasm.SendHttpResponse(400, nil, []byte("Invalid JSON or missing csr"), -1)
+	var req map[string]interface{}
+	if err := json.Unmarshal(body, &req); err != nil {
+		proxywasm.LogWarnf("Invalid JSON")
+		proxywasm.SendHttpResponse(400, nil, []byte("Invalid JSON"), -1)
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
 		return types.ActionPause
 	}
-	block, _ := pem.Decode([]byte(req.CSR))
+	csrString := ""
+	switch ctx.signerType {
+	case "crypki":
+		if val, ok := req["csr"].(string); ok {
+			csrString = val
+		}
+	case "cfssl":
+		if val, ok := req["certificate_request"].(string); ok {
+			csrString = val
+		}
+	}
+	if csrString == "" {
+		proxywasm.LogWarnf("Missing CSR in JSON")
+		proxywasm.SendHttpResponse(400, nil, []byte("Missing CSR in JSON"), -1)
+		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
+		return types.ActionPause
+	}
+	block, _ := pem.Decode([]byte(csrString))
 	if block == nil || block.Type != "CERTIFICATE REQUEST" {
-		proxywasm.LogWarnf("Invalid PEM CSR: %s", req.CSR)
+		proxywasm.LogWarnf("Invalid PEM CSR: %s", csrString)
 		proxywasm.SendHttpResponse(400, nil, []byte("Invalid PEM CSR"), -1)
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
 		return types.ActionPause
 	}
 	csr, err := x509.ParseCertificateRequest(block.Bytes)
 	if err != nil {
-		proxywasm.LogWarnf("Failed to parse CSR: %s", req.CSR)
+		proxywasm.LogWarnf("Failed to parse CSR: %s", csrString)
 		proxywasm.SendHttpResponse(400, nil, []byte("Failed to parse CSR"), -1)
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
 		return types.ActionPause

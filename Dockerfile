@@ -9,11 +9,11 @@ ARG BUILD_DATE
 # git rev-parse --short HEAD
 ARG VCS_REF
 
-ENV VERSION=$VERSION
-ENV BUILD_DATE=$BUILD_DATE
-ENV VCS_REF=$VCS_REF
-
 ENV APP_NAME=${APP_NAME}
+
+ENV VERSION=${VERSION}
+ENV BUILD_DATE=${BUILD_DATE}
+ENV VCS_REF=${VCS_REF}
 
 WORKDIR ${GOPATH}/src/${APP_NAME}
 
@@ -35,9 +35,14 @@ RUN rm -rf "${GOPATH}"
 # https://github.com/proxy-wasm/proxy-wasm-cpp-host/pull/427
 FROM docker.io/envoyproxy/envoy:v1.34-latest
 
-LABEL org.opencontainers.image.version=$VERSION
-LABEL org.opencontainers.image.revision=$VCS_REF
-LABEL org.opencontainers.image.created=$BUILD_DATE
+ARG APP_NAME=certsigner-envoy
+ARG VERSION=test
+ARG BUILD_DATE
+ARG VCS_REF
+
+LABEL org.opencontainers.image.version=${VERSION}
+LABEL org.opencontainers.image.revision=${VCS_REF}
+LABEL org.opencontainers.image.created=${BUILD_DATE}
 LABEL org.opencontainers.image.title="Athenz Certificate Signer Envoy"
 LABEL org.opencontainers.image.authors="ctyano <ctyano@duck.com>"
 LABEL org.opencontainers.image.vendor="ctyano <ctyano@duck.com>"
@@ -48,11 +53,6 @@ LABEL org.opencontainers.image.source="https://github.com/ctyano/certsigner-envo
 
 RUN apt-get update && \
     apt-get install -y curl openssl wabt
-
-ARG APP_NAME=certsigner-envoy
-ARG VERSION=test
-ARG BUILD_DATE
-ARG VCS_REF
 
 ENV APP_NAME=${APP_NAME}
 ENV VERSION=${VERSION}
