@@ -123,7 +123,7 @@ func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlugi
 		proxywasm.LogCritical(`Invalid configuration format; expected {"user_prefix": "<jwt claim name to extract athenz user name>"}`)
 		return types.OnPluginStartStatusFailed
 	}
-	if p.signerType != "crypki" || p.signerType != "cfssl" {
+	if p.signerType != "crypki" && p.signerType != "cfssl" {
 		proxywasm.LogCritical(`Invalid configuration format; expected {"signer": "<\"crypki\" or \"cfssl\">"}`)
 		return types.OnPluginStartStatusFailed
 	}
