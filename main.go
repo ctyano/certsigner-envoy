@@ -23,18 +23,6 @@ type CFSSLCSRRequest struct {
 	CSR string `json:"certificate_request"`
 }
 
-type CSRProvider interface {
-	GetCSR() string
-}
-
-func (r CrypkiCSRRequest) GetCSR() string {
-	return r.CSR
-}
-
-func (r CFSSLCSRRequest) GetCSR() string {
-	return r.CSR
-}
-
 func main() {}
 func init() {
 	proxywasm.SetVMContext(&vmContext{})
