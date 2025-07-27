@@ -21,7 +21,6 @@ env:
   DOCKER_TAEGET_PLATFORMS: linux/amd64,linux/arm64
   DOCKER_BUILD_ARGS: |
     VERSION=0.0.0
-    VERSION=
   TRACKING_GIT_REPO_MAIN: envoyproxy/envoy
   TRACKING_GIT_REPO_SUB: proxy-wasm/proxy-wasm-go-sdk
 
@@ -109,7 +108,7 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
           echo "ENVOY_VERSION=${LATEST_TAG}" >> $GITHUB_ENV
-          echo "VERSION=${TAG_VERSION}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "DOCKER_TAG=:${TAG_VERSION}" >> $GITHUB_ENV
 
       # Extract metadata (tags, labels) for Docker
