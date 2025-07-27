@@ -42,6 +42,14 @@ jobs:
       statuses: none
 
     steps:
+      # A GitHub Action to expose useful environment variables.
+      # https://github.com/FranzDiebold/github-env-vars-action
+      -
+        name: GitHub Environment Variables Action
+        id: env
+        # uses: https://github.com/FranzDiebold/github-env-vars-action/tags
+        uses: FranzDiebold/github-env-vars-action@v2
+
       # A GitHub Action to check remote repositories
       -
         name: Check remote repositories
@@ -64,9 +72,8 @@ jobs:
             TAG_VERSION="${LATEST_TAG}-${MODULE_HASH}.${CI_RUN_NUMBER}"
           fi
           CURRENT_VERSION="$( \
-            curl -s https://api.github.com/repos/${{ env.CI_REPOSITORY_OWNER }}/${{ env.CI_REPOSITORY_NAME }}/releases \
+            curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/${{ env.CI_REPOSITORY_OWNER }}/${{ env.CI_REPOSITORY_NAME }}/releases \
               | jq -r '.[].tag_name' \
-              | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+)?(\.[0-9]+)?$' \
               | sort -ruV \
               | head -n1 \
           )"
