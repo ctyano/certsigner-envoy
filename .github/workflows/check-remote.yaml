@@ -71,9 +71,9 @@ jobs:
               )"
             TAG_VERSION="${LATEST_TAG}-${MODULE_HASH}"
           fi
-          CURRENT_VERSION="$( \
-            curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/${{ env.CI_REPOSITORY_OWNER }}/${{ env.CI_REPOSITORY_NAME }}/releases \
-              | jq -r '.[].tag_name' \
+          CURRENT_TAG_VERSION="$( \
+            curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/${{ env.CI_REPOSITORY_OWNER }}/${{ env.CI_REPOSITORY_NAME }}/tags \
+              | jq -r '.[].name' \
               | sort -ruV \
               | head -n1 \
           )"
@@ -83,7 +83,7 @@ jobs:
           printf "MODULE_HASH=${MODULE_HASH}\n" >> $GITHUB_ENV
           printf "VERSION=${VERSION}\n" >> $GITHUB_ENV
           printf "TAG_VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
-          printf "CURRENT_VERSION=${CURRENT_VERSION}\n" >> $GITHUB_ENV
+          printf "CURRENT_TAG_VERSION=${CURRENT_TAG_VERSION}\n" >> $GITHUB_ENV
 
       # This action checks-out your repository under $GITHUB_WORKSPACE, so your workflow can access it.
       # https://github.com/actions/checkout
@@ -106,7 +106,7 @@ jobs:
       -
         name: Create git tag
         id: tag
-        if: ${{ env.CURRENT_VERSION != '' && env.VERSION != '' && env.VERSION != env.CURRENT_VERSION }}
+        if: ${{ env.CURRENT_TAG_VERSION != '' && env.TAG_VERSION != '' && env.TAG_VERSION != env.CURRENT_TAG_VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -117,7 +117,7 @@ jobs:
 
       - name: Trigger Workflows
         id: trigger
-        if: ${{ env.CURRENT_VERSION != '' && env.VERSION != '' && env.VERSION != env.CURRENT_VERSION }}
+        if: ${{ env.CURRENT_TAG_VERSION != '' && env.TAG_VERSION != '' && env.TAG_VERSION != env.CURRENT_TAG_VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
