@@ -80,7 +80,8 @@ type httpContext struct {
 //   value: |
 //     {
 //       "user_prefix": "<prefix to prepend to the jwt claim to compare with csr subject cn as an athenz user name. e.g. user.>",
-//       "claim": "<jwt claim name to extract athenz user name>"
+//       "claim": "<jwt claim name to extract athenz user name>",
+//       "signer": "<name for the certificate signer product ("crypki" or "cfssl")>"
 //     }
 func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPluginStartStatus {
 	proxywasm.LogDebug("Loading plugin config")
