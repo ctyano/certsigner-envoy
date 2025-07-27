@@ -96,13 +96,14 @@ jobs:
               )"
             TAG_VERSION="${LATEST_TAG}-${MODULE_HASH}"
           fi
+          VERSION=$(echo ${TAG_VERSION} | sed -e 's/.*v\([0-9]*.[0-9]*.[0-9]*\).*/\1/g')
 
           # here we can place the command that will generate multi-line text
           echo "DOCKER_BUILD_ARGS<<EOF" >> $GITHUB_ENV
           printf "${{ env.DOCKER_BUILD_ARGS }}" >> $GITHUB_ENV
           printf "ENVOY_VERSION=${LATEST_TAG}\n" >> $GITHUB_ENV
           printf "MODULE_HASH=${MODULE_HASH}\n" >> $GITHUB_ENV
-          printf "VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
+          printf "VERSION=${VERSION}\n" >> $GITHUB_ENV
           printf "TAG_VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
           printf "VCS_REF=${TAG_VERSION}\n" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
