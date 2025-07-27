@@ -54,7 +54,7 @@ LABEL org.opencontainers.image.documentation="https://www.athenz.io/"
 LABEL org.opencontainers.image.source="https://github.com/ctyano/certsigner-envoy"
 
 RUN apt-get update && \
-    apt-get install -y wabt
+    apt-get install -y curl openssl wabt
 
 ENV APP_NAME=${APP_NAME}
 ENV VERSION=${VERSION}
