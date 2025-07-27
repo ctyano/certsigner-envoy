@@ -54,7 +54,6 @@ jobs:
             | sort -ruV \
             | head -n1)
           if [[ "${{ env.CI_REF }}" == "refs/tags/"* ]]; then
-            PACKAGE_VERSION="$(git tag --points-at HEAD)"
             TAG_VERSION="$(git tag --points-at HEAD)"
           else
             MODULE_HASH="$( \
@@ -62,16 +61,21 @@ jobs:
                 | jq -r .[0].sha \
                 | cut -c -7
               )"
-            PACKAGE_VERSION="$( \
-              curl -s https://api.github.com/repos/${{ env.TRACKING_GIT_REPO_MAIN }}/commits \
-                | jq -r .[0].sha \
-                | cut -c -7
-              )"
-            TAG_VERSION="${PACKAGE_VERSION}-${MODULE_HASH}.${CI_RUN_NUMBER}"
+            TAG_VERSION="${LATEST_TAG}-${MODULE_HASH}.${CI_RUN_NUMBER}"
           fi
+          CURRENT_VERSION="$( \
+            curl -s https://api.github.com/repos/${{ env.CI_REPOSITORY_OWNER }}/${{ env.CI_REPOSITORY_NAME }}/releases \
+              | jq -r '.[].tag_name' \
+              | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+)?(\.[0-9]+)?$' \
+              | sort -ruV \
+              | head -n1 \
+          )"
+
           printf "ENVOY_VERSION=${LATEST_TAG}\n" >> $GITHUB_ENV
+          printf "MODULE_HASH=${MODULE_HASH}\n" >> $GITHUB_ENV
           printf "VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
           printf "TAG_VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
+          printf "CURRENT_VERSION=${CURRENT_VERSION}\n" >> $GITHUB_ENV
 
       # This action checks-out your repository under $GITHUB_WORKSPACE, so your workflow can access it.
       # https://github.com/actions/checkout
@@ -94,7 +98,7 @@ jobs:
       -
         name: Create git tag
         id: tag
-        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name != 'pull_request' }}
+        if: ${{ env.CURRENT_VERSION != '' && env.VERSION != '' && env.VERSION != env.CURRENT_VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -104,6 +108,8 @@ jobs:
           git push -f origin tag ${{ env.TAG_VERSION }}
 
       - name: Trigger Workflows
+        id: trigger
+        if: ${{ env.CURRENT_VERSION != '' && env.VERSION != '' && env.VERSION != env.CURRENT_VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

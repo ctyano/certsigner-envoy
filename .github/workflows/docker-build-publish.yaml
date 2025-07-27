@@ -87,16 +87,10 @@ jobs:
             | sort -ruV \
             | head -n1)
           if [[ "${{ env.CI_REF }}" == "refs/tags/"* ]]; then
-            PACKAGE_VERSION="$(git tag --points-at HEAD)"
             TAG_VERSION="$(git tag --points-at HEAD)"
           else
             MODULE_HASH="$( \
               curl -s https://api.github.com/repos/${{ env.TRACKING_GIT_REPO_SUB }}/commits \
-                | jq -r .[0].sha \
-                | cut -c -7
-              )"
-            PACKAGE_VERSION="$( \
-              curl -s https://api.github.com/repos/${{ env.TRACKING_GIT_REPO_MAIN }}/commits \
                 | jq -r .[0].sha \
                 | cut -c -7
               )"
@@ -107,6 +101,7 @@ jobs:
           echo "DOCKER_BUILD_ARGS<<EOF" >> $GITHUB_ENV
           printf "${{ env.DOCKER_BUILD_ARGS }}" >> $GITHUB_ENV
           printf "ENVOY_VERSION=${LATEST_TAG}\n" >> $GITHUB_ENV
+          printf "MODULE_HASH=${MODULE_HASH}\n" >> $GITHUB_ENV
           printf "VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
           printf "TAG_VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
           printf "VCS_REF=${TAG_VERSION}\n" >> $GITHUB_ENV
