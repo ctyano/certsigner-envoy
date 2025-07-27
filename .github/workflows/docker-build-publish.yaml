@@ -100,14 +100,14 @@ jobs:
                 | jq -r .[0].sha \
                 | cut -c -7
               )"
-            TAG_VERSION="v${PACKAGE_VERSION}-${MODULE_HASH}.${CI_RUN_NUMBER}"
+            TAG_VERSION="v${LATEST_TAG}-${MODULE_HASH}.${CI_RUN_NUMBER}"
           fi
 
           # here we can place the command that will generate multi-line text
           echo "DOCKER_BUILD_ARGS<<EOF" >> $GITHUB_ENV
           printf "${{ env.DOCKER_BUILD_ARGS }}" >> $GITHUB_ENV
           printf "ENVOY_VERSION=${LATEST_TAG}\n" >> $GITHUB_ENV
-          printf "VERSION=${PACKAGE_VERSION}\n" >> $GITHUB_ENV
+          printf "VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
           printf "TAG_VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
           printf "VCS_REF=${TAG_VERSION}\n" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
