@@ -77,10 +77,11 @@ jobs:
               | sort -ruV \
               | head -n1 \
           )"
+          VERSION=$(echo ${TAG_VERSION} | sed -e 's/.*v\([0-9]*.[0-9]*.[0-9]*\).*/\1/g')
 
           printf "ENVOY_VERSION=${LATEST_TAG}\n" >> $GITHUB_ENV
           printf "MODULE_HASH=${MODULE_HASH}\n" >> $GITHUB_ENV
-          printf "VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
+          printf "VERSION=${VERSION}\n" >> $GITHUB_ENV
           printf "TAG_VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
           printf "CURRENT_VERSION=${CURRENT_VERSION}\n" >> $GITHUB_ENV
 
