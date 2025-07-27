@@ -1,3 +1,5 @@
+ARG ENVOY_VERSION=v1.34-latest
+
 # note: never use the :latest tag in a production site
 FROM docker.io/library/golang:1 AS builder
 
@@ -33,7 +35,7 @@ RUN rm -rf "${GOPATH}"
 # [Required] A host environment supporting this toolchain, such as Envoy >= 1.33.0. This SDK leverages additional host imports added to the proxy-wasm-cpp-host in PR#427.
 # https://github.com/proxy-wasm/proxy-wasm-go-sdk/blob/ab4161dcf9246a828008b539a82a1556cf0f2e24/README.md#requirements
 # https://github.com/proxy-wasm/proxy-wasm-cpp-host/pull/427
-FROM docker.io/envoyproxy/envoy:v1.34-latest
+FROM docker.io/envoyproxy/envoy:${ENVOY_VERSION}
 
 ARG APP_NAME=certsigner-envoy
 ARG VERSION=test

@@ -12,6 +12,9 @@ generatorOptions:
   disableNameSuffixHash: true
 
 configMapGenerator:
+  - name: dex-config
+    files:
+      - config.docker.yaml=./dex.yaml
   - name: envoy-config
     files:
       - envoy.yaml=./envoy.yaml
