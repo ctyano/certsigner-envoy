@@ -69,7 +69,7 @@ jobs:
                 | jq -r .[0].sha \
                 | cut -c -7
               )"
-            TAG_VERSION="${LATEST_TAG}-${MODULE_HASH}.${CI_RUN_NUMBER}"
+            TAG_VERSION="${LATEST_TAG}-${MODULE_HASH}"
           fi
           CURRENT_VERSION="$( \
             curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/${{ env.CI_REPOSITORY_OWNER }}/${{ env.CI_REPOSITORY_NAME }}/releases \
