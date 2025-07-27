@@ -20,7 +20,8 @@ on:
 env:
   DOCKER_REGISTRY_URL: ghcr.io
   TARGET_TAG: ""
-  TRACKING_GIT_REPO: proxy-wasm/proxy-wasm-go-sdk
+  TRACKING_GIT_REPO_MAIN: envoyproxy/envoy
+  TRACKING_GIT_REPO_SUB: proxy-wasm/proxy-wasm-go-sdk
 
 jobs:
   build:
@@ -47,22 +48,29 @@ jobs:
         id: check
         if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name != 'pull_request' }}
         run: |
+          LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/${TRACKING_GIT_REPO_MAIN}/releases \
+            | jq -r '.[].tag_name' \
+            | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+)?(\.[0-9]+)?$' \
+            | sort -ruV \
+            | head -n1)
           if [[ "${{ env.CI_REF }}" == "refs/tags/"* ]]; then
             PACKAGE_VERSION="$(git tag --points-at HEAD)"
             TAG_VERSION="$(git tag --points-at HEAD)"
           else
+            MODULE_HASH="$( \
+              curl -s https://api.github.com/repos/${{ env.TRACKING_GIT_REPO_SUB }}/commits \
+                | jq -r .[0].sha \
+                | cut -c -7
+              )"
             PACKAGE_VERSION="$( \
-              curl -s https://api.github.com/repos/${{ env.TRACKING_GIT_REPO }}/commits \
+              curl -s https://api.github.com/repos/${{ env.TRACKING_GIT_REPO_MAIN }}/commits \
                 | jq -r .[0].sha \
                 | cut -c -7
               )"
-            TAG_VERSION="$( \
-              curl -s https://api.github.com/repos/${{ env.TRACKING_GIT_REPO }}/commits \
-                | jq -r .[0].sha \
-                | cut -c -7
-              )"
+            TAG_VERSION="v${PACKAGE_VERSION}-${MODULE_HASH}.${CI_RUN_NUMBER}"
           fi
-          printf "VERSION=${PACKAGE_VERSION}\n" >> $GITHUB_ENV
+          printf "ENVOY_VERSION=${LATEST_TAG}\n" >> $GITHUB_ENV
+          printf "VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
           printf "TAG_VERSION=${TAG_VERSION}\n" >> $GITHUB_ENV
 
       # This action checks-out your repository under $GITHUB_WORKSPACE, so your workflow can access it.

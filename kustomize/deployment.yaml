@@ -13,7 +13,32 @@ spec:
       labels:
         app: certsigner-envoy
     spec:
+      volumes:
+        - name: dex-config
+          configMap:
+            name: dex-config
+        - name: envoy-config
+          configMap:
+            name: envoy-config
       containers:
+        - name: dex
+          image: ghcr.io/dexidp/dex:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: dex
+              containerPort: 5556
+              protocol: TCP
+          volumeMounts:
+            - name: dex-config
+              mountPath: /etc/dex/config.docker.yaml
+              subPath: config.docker.yaml
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: 500m
+            requests:
+              memory: 64Mi
+              cpu: 50m
         - name: envoy
           image: ghcr.io/ctyano/certsigner-envoy:latest
           imagePullPolicy: IfNotPresent
@@ -29,7 +54,3 @@ spec:
             - name: config
               mountPath: /etc/envoy/envoy.yaml
               subPath: envoy.yaml
-      volumes:
-        - name: config
-          configMap:
-            name: envoy-config

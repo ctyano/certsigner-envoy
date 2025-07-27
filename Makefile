@@ -4,10 +4,12 @@ endif
 
 ifeq ($(DOCKER_TAG),)
 DOCKER_TAG := :latest
-else
+endif
 ifneq ($(VERSION),)
 DOCKER_TAG := :v$(VERSION)
 endif
+ifeq ($(ENVOY_VERSION),)
+	ENVOY_VERSION := $(shell curl -s https://api.github.com/repos/envoyproxy/envoy/releases | jq -r .[].tag_name | sort -rV | head -n1)
 endif
 
 ifeq ($(PATCH),)
@@ -29,7 +31,7 @@ XPLATFORMS := linux/amd64,linux/arm64
 endif
 XPLATFORM_ARGS := --platform=$(XPLATFORMS)
 
-BUILD_ARG := --build-arg 'BUILD_DATE=$(BUILD_DATE)' --build-arg 'VCS_REF=$(VCS_REF)' --build-arg 'VERSION=$(VERSION)'
+BUILD_ARG := --build-arg 'BUILD_DATE=$(BUILD_DATE)' --build-arg 'VCS_REF=$(VCS_REF)' --build-arg 'VERSION=$(VERSION)' --build-arg 'ENVOY_VERSION=$(ENVOY_VERSION)'
 
 ifeq ($(DOCKER_REGISTRY_OWNER),)
 DOCKER_REGISTRY_OWNER=ctyano
