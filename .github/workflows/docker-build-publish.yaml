@@ -94,7 +94,7 @@ jobs:
                 | jq -r .[0].sha \
                 | cut -c -7
               )"
-            TAG_VERSION="${LATEST_TAG}-${MODULE_HASH}.${CI_RUN_NUMBER}"
+            TAG_VERSION="${LATEST_TAG}-${MODULE_HASH}"
           fi
 
           # here we can place the command that will generate multi-line text
@@ -191,3 +191,4 @@ jobs:
             DOCKER_REGISTRY="${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_OWNER }}/" \
             make build; \
           fi
+
