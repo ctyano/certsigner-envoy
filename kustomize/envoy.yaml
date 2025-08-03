@@ -1,4 +1,8 @@
 ---
+node:
+  id: certsigner-envoy-node-1
+  cluster: certsigner-cluster
+
 static_resources:
   listeners:
     - name: listener_0
@@ -31,10 +35,14 @@ static_resources:
                               cluster: dex
                               timeout: 5s
                               uri: "https://oauth2.athenz.svc.cluster.local:5556/dex/keys"
+                            cache_duration: { seconds: 600 }
                           # Accept JWT issued by only certtain issuer and for only certain audiences
                           issuer: https://oauth2.athenz.svc.cluster.local:5556/dex
                           audiences:
                             - athenz-user-cert
+                          jwt_cache_config:
+                            jwt_cache_size: 100     # The unit is number of JWTs, default to 100.
+                            jwt_max_token_size: 4096 # The maximum size of a single cached token in bytes. If this field is not set or is set to 0, then the default value 4096 bytes is used. The maximum value for a token is inclusive.
                           from_headers:
                             - name: "Authorization"
                               value_prefix: "Bearer "
@@ -64,9 +72,10 @@ static_resources:
                               claim_name: iat
                             - header_name: x-athenz-jwt-exp
                               claim_name: exp
-                      requirement_map:
-                        accesstoken:
-                          provider_name: dex_accesstoken
+                      rules:
+                        - match: { prefix: "/" }
+                          requires:
+                            provider_name: dex_accesstoken
                   - name: envoy.filters.http.wasm
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
@@ -79,10 +88,9 @@ static_resources:
                               "claim": "name",
                               "signer": "crypki"
                             }
-                        name: csr_filter
-                        root_id: csr_filter
+                        name: cs_wasm_filter
                         vm_config:
-                          vm_id: csr_filter_vm
+                          vm_id: cs_wasm_filter_vm
                           runtime: envoy.wasm.runtime.v8
                           code:
                             local:

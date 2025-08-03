@@ -4,7 +4,6 @@ ARG ENVOY_VERSION=v1.34-latest
 FROM docker.io/library/golang:1 AS builder
 
 ARG APP_NAME=certsigner-envoy
-
 ARG VERSION=test
 # date -u +'%Y-%m-%dT%H:%M:%SZ'
 ARG BUILD_DATE
@@ -12,7 +11,6 @@ ARG BUILD_DATE
 ARG VCS_REF
 
 ENV APP_NAME=${APP_NAME}
-
 ENV VERSION=${VERSION}
 ENV BUILD_DATE=${BUILD_DATE}
 ENV VCS_REF=${VCS_REF}
