@@ -80,7 +80,8 @@ type httpContext struct {
 //   value: |
 //     {
 //       "user_prefix": "<prefix to prepend to the jwt claim to compare with csr subject cn as an athenz user name. e.g. user.>",
-//       "claim": "<jwt claim name to extract athenz user name>"
+//       "claim": "<jwt claim name to extract athenz user name>",
+//       "signer": "<name for the certificate signer product ("crypki" or "cfssl")>"
 //     }
 func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPluginStartStatus {
 	proxywasm.LogDebug("Loading plugin config")
@@ -136,13 +137,15 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	auth, err := proxywasm.GetHttpRequestHeader("authorization")
 	if err != nil || !strings.HasPrefix(strings.ToLower(auth), "bearer ") {
 		proxywasm.LogWarnf("Missing or invalid authorization header")
-		proxywasm.SendHttpResponse(401, nil, []byte("Missing or invalid authorization header"), -1)
+		proxywasm.SendHttpResponse(401, nil, []byte("Invalid authorization header"), -1)
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
 		return types.ActionPause
 	}
+	// Trim the first 7 characters and other spaces
+	rawJWT := strings.TrimSpace(auth[8:])
+
 	// JWT: not validated, just parsed for name
 	// This plugin expects the JWT to be validated with Envoy JWT Filter
-	rawJWT := strings.TrimPrefix(auth, "Bearer ")
 	token, _, err := new(jwt.Parser).ParseUnverified(rawJWT, jwt.MapClaims{})
 	if err != nil {
 		proxywasm.LogWarnf("Invalid JWT: %s", rawJWT)
