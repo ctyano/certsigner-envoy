@@ -145,9 +145,9 @@ i=0; \
 while true; do \
 	printf "\n***** Waiting for crypki($$(( $$i * $${SLEEP_SECONDS} ))s/$${WAITING_THRESHOLD}s) *****\n"; \
 	( \
-	test $$(( $$(kubectl -n certsigner get all | grep crypki-softhsm | grep -E "0/1" | wc -l) )) -eq 0 \
+	test $$(( $$(kubectl -n certsigner get all | grep certsigner | grep -E "0/1" | wc -l) )) -eq 0 \
 	&& \
-	kubectl -n certsigner exec deployment/crypki-softhsm -it -c athenz-cli -- \
+	kubectl -n certsigner exec deployment/certsigner -it -c athenz-cli -- \
 		curl \
 			-s \
 			--fail \
@@ -167,8 +167,8 @@ while true; do \
 	i=$$(( i + 1 )); \
 	if [ $$i -eq $$(( $${WAITING_THRESHOLD} / $${SLEEP_SECONDS} )) ]; then \
 		printf "\n\n** Waiting ($$(( $$i * $${SLEEP_SECONDS} ))s) reached to threshold($${WAITING_THRESHOLD}s) **\n\n"; \
-		kubectl -n certsigner get all | grep -E "pod/crypki-softhsm-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner logs %% --all-containers=true ||:; \
-		kubectl -n certsigner get all | grep -E "pod/crypki-softhsm-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner describe %% ||:; \
+		kubectl -n certsigner get all | grep -E "pod/certsigner-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner logs %% --all-containers=true ||:; \
+		kubectl -n certsigner get all | grep -E "pod/certsigner-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner describe %% ||:; \
 		kubectl -n certsigner get all; \
 		exit 1; \
 	fi; \
@@ -228,6 +228,14 @@ generate-ca:
 	openssl rsa -pubout -in keys/ca.private.pem -out keys/ca.public.pem
 	openssl req -new -x509 -days 99999 -config openssl/ca.openssl.config -extensions ext_req -key keys/ca.private.pem -out certs/ca.cert.pem
 
+generate-admin: generate-ca
+	mkdir keys certs ||:
+	openssl genrsa -out keys/athenz_admin.private.pem 4096
+	openssl rsa -pubout -in keys/athenz_admin.private.pem -out keys/athenz_admin.public.pem
+	openssl req -config openssl/athenz_admin.openssl.config -new -key keys/athenz_admin.private.pem -out certs/athenz_admin.csr.pem -extensions ext_req
+	openssl x509 -req -in certs/athenz_admin.csr.pem -CA certs/ca.cert.pem -CAkey keys/ca.private.pem -CAcreateserial -out certs/athenz_admin.cert.pem -days 99999 -extfile openssl/athenz_admin.openssl.config -extensions ext_req
+	openssl verify -CAfile certs/ca.cert.pem certs/athenz_admin.cert.pem
+
 generate-crypki: generate-ca
 	mkdir keys certs ||:
 	openssl genrsa -out - 4096 | openssl pkey -out keys/crypki.private.pem
@@ -235,7 +243,7 @@ generate-crypki: generate-ca
 	openssl x509 -req -in certs/crypki.csr.pem -CA certs/ca.cert.pem -CAkey keys/ca.private.pem -CAcreateserial -out certs/crypki.cert.pem -days 99999 -extfile openssl/crypki.openssl.config -extensions ext_req
 	openssl verify -CAfile certs/ca.cert.pem certs/crypki.cert.pem
 
-generate-certificates: generate-ca generate-crypki
+generate-certificates: generate-ca generate-crypki generate-admin
 
 copy-certificates-to-kustomization:
 	cp -r keys certs kustomize/

@@ -23,6 +23,15 @@ secretGenerator:
     - server.crt=certs/crypki.cert.pem
     - client.crt=certs/crypki.cert.pem
   type: Opaque
+- name: athenz-admin-keys
+  files:
+  - athenz_admin.private.pem=keys/athenz_admin.private.pem
+  - athenz_admin.cert.pem=certs/athenz_admin.cert.pem
+  type: Opaque
+- name: athenz-crypki-cacert
+  files:
+  - ca.cert.pem=certs/ca.cert.pem
+  type: Opaque
 
 configMapGenerator:
   - name: dex-config
