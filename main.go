@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
@@ -216,7 +215,7 @@ func (ctx *httpContext) OnHttpRequestBody(bodySize int, endOfStream bool) types.
 		return types.ActionPause
 	}
 
-	cn, err := parseCSRCommonName(csrPEM)
+	cn, err := parseCSRCommonName(csrString)
 	//block, _ := pem.Decode([]byte(csrString))
 	//if block == nil || block.Type != "CERTIFICATE REQUEST" {
 	if err != nil {
@@ -225,14 +224,16 @@ func (ctx *httpContext) OnHttpRequestBody(bodySize int, endOfStream bool) types.
 		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
 		return types.ActionPause
 	}
-	csr, err := x509.ParseCertificateRequest(block.Bytes)
-	if err != nil {
-		proxywasm.LogWarnf("Failed to parse CSR: %s", csrString)
-		proxywasm.SendHttpResponse(400, nil, []byte("Failed to parse CSR"), -1)
-		proxywasm.SetProperty([]string{"result"}, []byte("failure"))
-		return types.ActionPause
-	}
-	//cn := csr.Subject.CommonName
+	/*
+			csr, err := x509.ParseCertificateRequest(block.Bytes)
+			if err != nil {
+				proxywasm.LogWarnf("Failed to parse CSR: %s", csrString)
+				proxywasm.SendHttpResponse(400, nil, []byte("Failed to parse CSR"), -1)
+				proxywasm.SetProperty([]string{"result"}, []byte("failure"))
+				return types.ActionPause
+			}
+		cn := csr.Subject.CommonName
+	*/
 	if ctx.userPrefix+name != cn {
 		proxywasm.LogWarnf("Claim %s does not match CSR CN: %s[%s], cn[%s]", ctx.nameClaim, ctx.nameClaim, name, cn)
 		proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("The name %s in %s claim does not match CSR CN %s", name, ctx.nameClaim, cn)), -1)
@@ -250,7 +251,7 @@ func (*httpContext) OnHttpResponseHeaders(_ int, _ bool) types.Action {
 		proxywasm.LogCriticalf("Failed to set response constant header: %v", err)
 	}
 
-	hs, err := proxywasm.GetHttpResponseHeaders()
+	_, err := proxywasm.GetHttpResponseHeaders()
 	if err != nil {
 		proxywasm.LogCriticalf("Failed to get response headers: %v", err)
 	}
