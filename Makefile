@@ -9,7 +9,7 @@ ifneq ($(VERSION),)
 DOCKER_TAG := :v$(VERSION)
 endif
 ifeq ($(ENVOY_VERSION),)
-	ENVOY_VERSION := $(shell curl -s https://api.github.com/repos/envoyproxy/envoy/releases | jq -r .[].tag_name | sort -rV | head -n1)
+ENVOY_VERSION := $(shell curl -s https://api.github.com/repos/envoyproxy/envoy/releases | jq -r .[].tag_name | sort -rV | head -n1)
 endif
 
 ifeq ($(PATCH),)
@@ -122,7 +122,6 @@ install-parsers: install-jq install-yq install-step
 
 load-docker-images:
 	docker pull docker.io/ghostunnel/ghostunnel:latest
-	docker pull docker.io/dexidp/dex:latest
 	docker pull $(DOCKER_REGISTRY)crypki-softhsm:latest
 	docker pull $(DOCKER_REGISTRY)athenz_user_cert:latest
 	docker pull docker.io/ealen/echo-server:latest
@@ -133,6 +132,7 @@ load-kubernetes-images:
 	kind load docker-image \
 		docker.io/ghostunnel/ghostunnel:latest \
 		$(DOCKER_REGISTRY)crypki-softhsm:latest \
+		$(DOCKER_REGISTRY)$(APP_NAME):latest \
 		$(DOCKER_REGISTRY)athenz_user_cert:latest \
 		docker.io/ealen/echo-server:latest \
 		docker.io/dexidp/dex:latest
