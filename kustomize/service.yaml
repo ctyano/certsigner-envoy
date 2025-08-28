@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: certsigner
+  labels:
+    app.kubernetes.io/name: certsigner
+    app.kubernetes.io/instance: certsigner
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: certsigner
+    app.kubernetes.io/instance: certsigner
+  ports:
+    - name: crypki
+      port: 4443
+      targetPort: crypki
+      protocol: TCP
+    - name: dex
+      port: 5556
+      targetPort: dex
+      protocol: TCP
+    - name: envoy
+      port: 10000
+      targetPort: envoy
+      protocol: TCP
+

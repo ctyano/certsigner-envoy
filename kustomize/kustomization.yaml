@@ -2,14 +2,36 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: athenz
+namespace: certsigner
 
 resources:
   - deployment.yaml
   - namespace.yaml
+  - service.yaml
 
 generatorOptions:
   disableNameSuffixHash: true
+
+secretGenerator:
+- name: crypki-keys
+  files:
+    - ca.key=keys/ca.private.pem
+    - ca.public.key=keys/ca.public.pem
+    - server.key=keys/crypki.private.pem
+    - client.key=keys/crypki.private.pem
+    - ca.crt=certs/ca.cert.pem
+    - server.crt=certs/crypki.cert.pem
+    - client.crt=certs/crypki.cert.pem
+  type: Opaque
+- name: athenz-admin-keys
+  files:
+  - athenz_admin.private.pem=keys/athenz_admin.private.pem
+  - athenz_admin.cert.pem=certs/athenz_admin.cert.pem
+  type: Opaque
+- name: athenz-crypki-cacert
+  files:
+  - ca.cert.pem=certs/ca.cert.pem
+  type: Opaque
 
 configMapGenerator:
   - name: dex-config
@@ -18,3 +40,10 @@ configMapGenerator:
   - name: envoy-config
     files:
       - envoy.yaml=./envoy.yaml
+  - name: crypki-config-template
+    files:
+      - crypki.config.template=conf/crypki.config.template
+  - name: crypki-shm
+    files:
+      - slot_pwd.txt=conf/slot_pwd.txt
+
