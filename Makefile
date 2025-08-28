@@ -121,6 +121,7 @@ install-kustomize: install-pathman
 install-parsers: install-jq install-yq install-step
 
 load-docker-images:
+	docker pull docker.io/ghostunnel/ghostunnel:latest
 	docker pull docker.io/dexidp/dex:latest
 	docker pull $(DOCKER_REGISTRY)crypki-softhsm:latest
 	docker pull $(DOCKER_REGISTRY)athenz_user_cert:latest
@@ -130,6 +131,7 @@ load-docker-images:
 load-kubernetes-images:
 	kubectl config get-contexts kind-kind --no-headers=true | grep -E "^\* +kind-kind"
 	kind load docker-image \
+		docker.io/ghostunnel/ghostunnel:latest \
 		$(DOCKER_REGISTRY)crypki-softhsm:latest \
 		$(DOCKER_REGISTRY)athenz_user_cert:latest \
 		docker.io/ealen/echo-server:latest \
@@ -145,9 +147,9 @@ i=0; \
 while true; do \
 	printf "\n***** Waiting for crypki($$(( $$i * $${SLEEP_SECONDS} ))s/$${WAITING_THRESHOLD}s) *****\n"; \
 	( \
-	test $$(( $$(kubectl -n certsigner get all | grep certsigner | grep -E "0/1" | wc -l) )) -eq 0 \
+	test $$(( $$(kubectl -n certsigner get all | grep certsigner-envoy | grep -E "0/1" | wc -l) )) -eq 0 \
 	&& \
-	kubectl -n certsigner exec deployment/certsigner -it -c athenz-cli -- \
+	kubectl -n certsigner exec deployment/certsigner-envoy -it -c athenz-cli -- \
 		curl \
 			-s \
 			--fail \
@@ -167,8 +169,8 @@ while true; do \
 	i=$$(( i + 1 )); \
 	if [ $$i -eq $$(( $${WAITING_THRESHOLD} / $${SLEEP_SECONDS} )) ]; then \
 		printf "\n\n** Waiting ($$(( $$i * $${SLEEP_SECONDS} ))s) reached to threshold($${WAITING_THRESHOLD}s) **\n\n"; \
-		kubectl -n certsigner get all | grep -E "pod/certsigner-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner logs %% --all-containers=true ||:; \
-		kubectl -n certsigner get all | grep -E "pod/certsigner-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner describe %% ||:; \
+		kubectl -n certsigner get all | grep -E "pod/certsigner-envoy-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner logs %% --all-containers=true ||:; \
+		kubectl -n certsigner get all | grep -E "pod/certsigner-envoy-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner describe %% ||:; \
 		kubectl -n certsigner get all; \
 		exit 1; \
 	fi; \
@@ -181,23 +183,23 @@ done
 	@echo ""
 
 test-kubernetes-athenz-oauth2:
-	timeout -k 0 30 kubectl -n certsigner port-forward deployment/oauth2-deployment 5556:5556 &
-	timeout -k 0 30 kubectl -n certsigner port-forward deployment/oauth2-deployment 10000:10000 &
+	timeout -k 0 30 kubectl -n certsigner port-forward deployment/certsigner-envoy 5556:5556 &
+	timeout -k 0 30 kubectl -n certsigner port-forward deployment/certsigner-envoy 10000:10000 &
 	SLEEP_SECONDS=5; \
 WAITING_THRESHOLD=30; \
 i=0; \
 while true; do \
 	printf "\n***** Waiting for athenz($$(( $$i * $${SLEEP_SECONDS} ))s/$${WAITING_THRESHOLD}s) *****\n"; \
 	( \
-	test $$(( $$(kubectl -n certsigner get all | grep oauth2 | grep -E "0/1" | wc -l) )) -eq 0 \
+	test $$(( $$(kubectl -n certsigner get all | grep certsigner-envoy | grep -E "0/1" | wc -l) )) -eq 0 \
 	&& \
-	kubectl -n certsigner exec deployment/oauth2-deployment -it -c dex -- \
+	kubectl -n certsigner exec deployment/certsigner-envoy -it -c dex -- \
 	    nc -vz 127.0.0.1 5556 \
 	&& \
-	kubectl -n certsigner exec deployment/oauth2-deployment -it -c dex -- \
+	kubectl -n certsigner exec deployment/certsigner-envoy -it -c dex -- \
 	    nc -vz 127.0.0.1 10000 \
 	&& \
-	kubectl -n certsigner exec deployment/oauth2-deployment -it -c athenz-user-cert  -- \
+	kubectl -n certsigner exec deployment/certsigner-envoy -it -c athenz-user-cert  -- \
 		athenz_user_cert test \
 	) \
 	&& break \
@@ -206,8 +208,8 @@ while true; do \
 	i=$$(( i + 1 )); \
 	if [ $$i -eq $$(( $${WAITING_THRESHOLD} / $${SLEEP_SECONDS} )) ]; then \
 		printf "\n\n** Waiting ($$(( $$i * $${SLEEP_SECONDS} ))s) reached to threshold($${WAITING_THRESHOLD}s) **\n\n"; \
-		kubectl -n certsigner get all | grep -E "pod/oauth2-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner logs %% --all-containers=true ||:; \
-		kubectl -n certsigner get all | grep -E "pod/oauth2-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner describe %% ||:; \
+		kubectl -n certsigner get all | grep -E "pod/certsigner-envoy-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner logs %% --all-containers=true ||:; \
+		kubectl -n certsigner get all | grep -E "pod/certsigner-envoy-" | sed -e 's/^\(pod\/[^ ]*\) *[0-9]\/[0-9].*/\1/g' | xargs -I%% kubectl -n certsigner describe %% ||:; \
 		kubectl -n certsigner get all; \
 		exit 1; \
 	fi; \
