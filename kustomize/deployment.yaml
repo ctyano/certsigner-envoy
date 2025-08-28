@@ -20,6 +20,18 @@ spec:
         - name: envoy-config
           configMap:
             name: envoy-config
+        - name: crypki-keys
+          secret:
+            secretName: crypki-keys
+            defaultMode: 0555
+        - name: crypki-config-template
+          configMap:
+            name: crypki-config-template
+        - name: crypki-shm
+          configMap:
+            name: crypki-shm
+        - name: crypki-logs
+          emptyDir: {}
       containers:
         - name: dex
           image: ghcr.io/dexidp/dex:latest
@@ -49,8 +61,101 @@ spec:
             - -l
             - debug
           ports:
-            - containerPort: 10000
+            - name: envoy
+              containerPort: 10000
+              protocol: TCP
           volumeMounts:
-            - name: config
+            - name: envoy-config
               mountPath: /etc/envoy/envoy.yaml
               subPath: envoy.yaml
+        - name: crypki-softhsm
+          image: ghcr.io/ctyano/crypki-softhsm:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DEBUG
+              value: "true"
+            - name: TZ
+              value: Asia/Tokyo
+            - name: CRYPKI_CONFIG_TEMPLATE
+              value: /opt/crypki/crypki.config.template
+            - name: CRYPKI_CONFIG_FILE
+              value: /opt/crypki/crypki-softhsm.json
+            - name: CRYPKI_PID_DIR
+              value: /opt/crypki/pid
+            - name: CRYPKI_LOG_DIR
+              value: /opt/crypki/logs
+            - name: USER_SSH_PRIVATE_KEY
+              value: ""
+            - name: USER_SSH_PUBLIC_KEY
+              value: ""
+            - name: HOST_X509_PRIVATE_KEY
+              value: ""
+            - name: HOST_X509_PUBLIC_KEY
+              value: ""
+            - name: HOST_SSH_PRIVATE_KEY
+              value: ""
+            - name: HOST_SSH_PUBLIC_KEY
+              value: ""
+            - name: SIGN_BLOB_PRIVATE_KEY
+              value: ""
+            - name: SIGN_BLOB_PUBLIC_KEY
+              value: ""
+          ports:
+            - name: crypki
+              containerPort: 4443
+              protocol: TCP
+          readinessProbe:
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 5
+            exec:
+              command:
+                - curl
+                - -s
+                - --fail
+                - --cert
+                - /opt/crypki/tls-crt/client.crt
+                - --key
+                - /opt/crypki/tls-crt/client.key
+                - --cacert
+                - /opt/crypki/tls-crt/ca.crt 
+                - --resolve
+                - localhost:4443:127.0.0.1
+                - https://localhost:4443/ruok
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+            exec:
+              command:
+                - curl
+                - -s
+                - --fail
+                - --cert
+                - /opt/crypki/tls-crt/client.crt
+                - --key
+                - /opt/crypki/tls-crt/client.key
+                - --cacert
+                - /opt/crypki/tls-crt/ca.crt 
+                - --resolve
+                - localhost:4443:127.0.0.1
+                - https://localhost:4443/ruok
+          resources:
+            limits:
+              memory: 1Gi
+              cpu: 1
+            requests:
+              memory: 100Mi
+              cpu: 200m
+          volumeMounts:
+            - name: crypki-keys
+              mountPath: /opt/crypki/tls-crt
+              readOnly: true
+            - name: crypki-config-template
+              mountPath: /opt/crypki/crypki.config.template
+              subPath: crypki.config.template
+            - name: crypki-shm
+              mountPath: /dev/shm
+            - name: crypki-logs
+              mountPath: /var/log/crypki
+
