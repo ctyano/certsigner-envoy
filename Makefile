@@ -123,7 +123,6 @@ install-parsers: install-jq install-yq install-step
 load-docker-images:
 	docker pull docker.io/dexidp/dex:latest
 	docker pull $(DOCKER_REGISTRY)crypki-softhsm:latest
-	docker pull $(DOCKER_REGISTRY)certsigner-envoy:latest
 	docker pull $(DOCKER_REGISTRY)athenz_user_cert:latest
 	docker pull docker.io/ealen/echo-server:latest
 	docker pull docker.io/dexidp/dex:latest
@@ -132,7 +131,6 @@ load-kubernetes-images:
 	kubectl config get-contexts kind-kind --no-headers=true | grep -E "^\* +kind-kind"
 	kind load docker-image \
 		$(DOCKER_REGISTRY)crypki-softhsm:latest \
-		$(DOCKER_REGISTRY)certsigner-envoy:latest \
 		$(DOCKER_REGISTRY)athenz_user_cert:latest \
 		docker.io/ealen/echo-server:latest \
 		docker.io/dexidp/dex:latest
