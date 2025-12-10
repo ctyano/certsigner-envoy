@@ -14,9 +14,9 @@ This repository relies on [WebAssembly for Proxies (Go SDK)](https://github.com/
 
 ## Showcase in this repository
 
-The Kubernetes manifests stored in [`kustomize`](kustomize) directory include deployment using [dex](https://dexidp.io) to provide OIDC authentication showcase.
+The Kubernetes manifests in the [`kustomize`](kustomize) directory include a deployment that uses [dex](https://dexidp.io) to showcase OIDC authentication.
 
-This showcase is expecting to receive access from [athenz_user_cert](https://github.com/ctyano/athenz_user_cert) CLI.
+This showcase is designed to be accessed by the [athenz_user_cert](https://github.com/ctyano/athenz_user_cert) CLI.
 
 ## List of Distributions
 
